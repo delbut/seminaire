@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Participant {
+  id                   String                @id @default(cuid())
+  name                 String
+  teamMembers          TeamMember[]
+  mercenaryAssignments MercenaryAssignment[]
+}
+
+model Team {
+  id               String                @id @default(cuid())
+  name             String
+  isFlexible       Boolean               @default(false)
+  members          TeamMember[]
+  results          TournamentResult[]
+  mercenaryVisits  MercenaryAssignment[]
+}
+
+model TeamMember {
+  id            String      @id @default(cuid())
+  teamId        String
+  team          Team        @relation(fields: [teamId], references: [id])
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id])
+
+  @@unique([teamId, participantId])
+}
+
+model Tournament {
+  id                   String                @id @default(cuid())
+  name                 String
+  status               String                @default("pending")
+  order                Int                   @default(0)
+  results              TournamentResult[]
+  mercenaryAssignments MercenaryAssignment[]
+  createdAt            DateTime              @default(now())
+}
+
+model TournamentResult {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  teamId       String
+  team         Team       @relation(fields: [teamId], references: [id])
+  position     Int
+  points       Int
+
+  @@unique([tournamentId, teamId])
+  @@unique([tournamentId, position])
+}
+
+model MercenaryAssignment {
+  id            String      @id @default(cuid())
+  tournamentId  String
+  tournament    Tournament  @relation(fields: [tournamentId], references: [id])
+  teamId        String
+  team          Team        @relation(fields: [teamId], references: [id])
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id])
+
+  @@unique([tournamentId])
+}
+
+model Settings {
+  id            String  @id @default("main")
+  drawCompleted Boolean @default(false)
+  team6Mode     String  @default("mercenary")
+  mercenaryId   String?
+}
