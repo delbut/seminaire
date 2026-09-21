@@ -17,9 +17,6 @@ export async function GET() {
         include: { team: { include: { members: { include: { participant: true } } } } },
         orderBy: { position: "asc" },
       },
-      mercenaryAssignments: {
-        include: { participant: true, team: true },
-      },
     },
     orderBy: { order: "asc" },
   });

@@ -1,14 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-// Update team 6 composition
-// body: { mode, pick1Id, pick2Id } — the 2 players chosen to join the mercenary in team 6
+// body: { pick1Id, pick2Id } — the 2 players joining the lone player in team 6
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await req.json();
 
   if (body.pick1Id && body.pick2Id) {
-    // Find which teams pick1 and pick2 currently belong to
+    // Find donor teams
     const [m1, m2] = await Promise.all([
       prisma.teamMember.findFirst({ where: { participantId: body.pick1Id } }),
       prisma.teamMember.findFirst({ where: { participantId: body.pick2Id } }),
@@ -21,33 +20,22 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     // Merge the 2 donor teams' leftover players into one team
     if (m1?.teamId && m2?.teamId && m1.teamId !== m2.teamId) {
-      const remaining2 = await prisma.teamMember.findFirst({ where: { teamId: m2.teamId } });
-      if (remaining2) {
-        // Move m2's remaining player into m1's team and delete m2's team
+      const remaining = await prisma.teamMember.findFirst({ where: { teamId: m2.teamId } });
+      if (remaining) {
         await prisma.teamMember.update({
-          where: { id: remaining2.id },
+          where: { id: remaining.id },
           data: { teamId: m1.teamId },
         });
         await prisma.team.delete({ where: { id: m2.teamId } });
       }
     }
 
-    // Set team 6 members: mercenary + pick1 + pick2
-    const settings = await prisma.settings.findUnique({ where: { id: "main" } });
-    await prisma.teamMember.deleteMany({ where: { teamId: id } });
-
-    const memberIds = [body.pick1Id, body.pick2Id];
-    if (settings?.mercenaryId) memberIds.push(settings.mercenaryId);
-
+    // Add pick1 and pick2 to team 6 (lone player already there)
     await prisma.teamMember.createMany({
-      data: memberIds.map((participantId) => ({ teamId: id, participantId })),
-    });
-  }
-
-  if (body.mode) {
-    await prisma.settings.update({
-      where: { id: "main" },
-      data: { team6Mode: body.mode },
+      data: [
+        { teamId: id, participantId: body.pick1Id },
+        { teamId: id, participantId: body.pick2Id },
+      ],
     });
   }
 

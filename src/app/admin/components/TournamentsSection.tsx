@@ -15,18 +15,11 @@ interface TournamentResult {
   team: { name: string };
 }
 
-interface MercenaryAssignment {
-  teamId: string;
-  team: { name: string };
-  participant: { name: string };
-}
-
 interface Tournament {
   id: string;
   name: string;
   status: string;
   results: TournamentResult[];
-  mercenaryAssignments: MercenaryAssignment[];
 }
 
 const POINTS: Record<number, number> = { 1: 6, 2: 5, 3: 4, 4: 3, 5: 2, 6: 1 };
@@ -34,10 +27,8 @@ const POINTS: Record<number, number> = { 1: 6, 2: 5, 3: 4, 4: 3, 5: 2, 6: 1 };
 export default function TournamentsSection() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
-  const [settings, setSettings] = useState<{ team6Mode: string; mercenaryId: string | null } | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [rankMap, setRankMap] = useState<Record<string, number>>({});
-  const [mercenaryTeamId, setMercenaryTeamId] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [newName, setNewName] = useState("");
   const [addingTournament, setAddingTournament] = useState(false);
@@ -46,10 +37,9 @@ export default function TournamentsSection() {
     Promise.all([
       fetch("/api/tournaments").then((r) => r.json()),
       fetch("/api/teams").then((r) => r.json()),
-    ]).then(([tv, { teams: t, settings: s }]) => {
+    ]).then(([tv, { teams: t }]) => {
       setTournaments(tv ?? []);
       setTeams(t ?? []);
-      setSettings(s);
     });
   };
 
@@ -60,8 +50,6 @@ export default function TournamentsSection() {
     const map: Record<string, number> = {};
     t.results.forEach((r) => { map[r.teamId] = r.position; });
     setRankMap(map);
-    const ma = t.mercenaryAssignments?.[0];
-    setMercenaryTeamId(ma?.teamId ?? "");
   };
 
   const save = async (tournamentId: string) => {
@@ -73,10 +61,7 @@ export default function TournamentsSection() {
     await fetch(`/api/tournaments/${tournamentId}/results`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        results,
-        mercenaryTeamId: settings?.team6Mode === "mercenary" ? mercenaryTeamId : undefined,
-      }),
+      body: JSON.stringify({ results }),
     });
     setSaving(false);
     setEditing(null);
@@ -98,9 +83,7 @@ export default function TournamentsSection() {
 
   return (
     <section className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white">🏆 Tournois</h2>
-      </div>
+      <h2 className="text-lg font-semibold text-white">🏆 Tournois</h2>
 
       <div className="space-y-3">
         {tournaments.map((t) => (
@@ -145,54 +128,32 @@ export default function TournamentsSection() {
             </div>
 
             {editing === t.id ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <p className="text-slate-400 text-xs">Attribuer une position à chaque équipe (1 = 1er) :</p>
-                <div className="grid gap-2">
-                  {teams.map((team) => (
-                    <div key={team.id} className="flex items-center gap-3">
-                      <span className="text-slate-300 text-sm flex-1">
-                        {team.name}
-                        <span className="text-slate-500 text-xs ml-2">
-                          ({team.members.map((m) => m.participant.name).join(", ")})
-                        </span>
+                {teams.map((team) => (
+                  <div key={team.id} className="flex items-center gap-3">
+                    <span className="text-slate-300 text-sm flex-1">
+                      {team.name}
+                      <span className="text-slate-500 text-xs ml-2">
+                        ({team.members.map((m) => m.participant.name).join(", ")})
                       </span>
-                      <select
-                        value={rankMap[team.id] ?? ""}
-                        onChange={(e) =>
-                          setRankMap({ ...rankMap, [team.id]: Number(e.target.value) })
-                        }
-                        className="bg-slate-700 text-slate-200 rounded px-2 py-1 text-sm"
-                      >
-                        <option value="">—</option>
-                        {[1, 2, 3, 4, 5, 6].map((pos) => (
-                          <option key={pos} value={pos}>
-                            {pos}e ({POINTS[pos]} pts)
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ))}
-                </div>
-
-                {settings?.team6Mode === "mercenary" && (
-                  <div className="mt-3 pt-3 border-t border-slate-700">
-                    <p className="text-slate-400 text-xs mb-2">
-                      Équipe renforcée par le mercenaire pour ce tournoi :
-                    </p>
+                    </span>
                     <select
-                      value={mercenaryTeamId}
-                      onChange={(e) => setMercenaryTeamId(e.target.value)}
+                      value={rankMap[team.id] ?? ""}
+                      onChange={(e) =>
+                        setRankMap({ ...rankMap, [team.id]: Number(e.target.value) })
+                      }
                       className="bg-slate-700 text-slate-200 rounded px-2 py-1 text-sm"
                     >
-                      <option value="">— Aucun —</option>
-                      {teams.map((team) => (
-                        <option key={team.id} value={team.id}>
-                          {team.name}
+                      <option value="">—</option>
+                      {[1, 2, 3, 4, 5, 6].map((pos) => (
+                        <option key={pos} value={pos}>
+                          {pos}e ({POINTS[pos]} pts)
                         </option>
                       ))}
                     </select>
                   </div>
-                )}
+                ))}
               </div>
             ) : (
               t.results.length > 0 && (
@@ -210,7 +171,6 @@ export default function TournamentsSection() {
         ))}
       </div>
 
-      {/* Add tournament */}
       <div className="bg-slate-800 rounded-xl p-4">
         <h3 className="text-sm font-medium text-slate-300 mb-3">Ajouter un tournoi</h3>
         <div className="flex gap-2">
