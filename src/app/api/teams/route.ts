@@ -13,5 +13,12 @@ export async function GET() {
     prisma.settings.findUnique({ where: { id: "main" } }),
   ]);
 
-  return NextResponse.json({ teams, settings });
+  let mercenary = null;
+  if (settings?.mercenaryId) {
+    mercenary = await prisma.participant.findUnique({
+      where: { id: settings.mercenaryId },
+    });
+  }
+
+  return NextResponse.json({ teams, settings, mercenary });
 }
