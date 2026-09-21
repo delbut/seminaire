@@ -2,10 +2,16 @@
 
 import { useEffect, useState } from "react";
 
+interface Participant {
+  id: string;
+  name: string;
+}
+
 interface Team {
   id: string;
   name: string;
-  members: { participant: { name: string } }[];
+  isFlexible: boolean;
+  members: { participant: Participant }[];
 }
 
 interface TournamentResult {
@@ -19,6 +25,7 @@ interface Tournament {
   id: string;
   name: string;
   status: string;
+  activePlayerId: string | null;
   results: TournamentResult[];
 }
 
@@ -29,6 +36,7 @@ export default function TournamentsSection() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [editing, setEditing] = useState<string | null>(null);
   const [rankMap, setRankMap] = useState<Record<string, number>>({});
+  const [activePlayerId, setActivePlayerId] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [newName, setNewName] = useState("");
   const [addingTournament, setAddingTournament] = useState(false);
@@ -45,11 +53,24 @@ export default function TournamentsSection() {
 
   useEffect(() => { load(); }, []);
 
+  const team6 = teams.find((t) => t.isFlexible);
+  const regularTeams = teams.filter((t) => !t.isFlexible);
+
+  // The 2 shared players: in team 6 AND in a regular team
+  const sharedPlayers: Participant[] = team6
+    ? team6.members
+        .filter((m) =>
+          regularTeams.some((t) => t.members.some((rm) => rm.participant.id === m.participant.id))
+        )
+        .map((m) => m.participant)
+    : [];
+
   const startEdit = (t: Tournament) => {
     setEditing(t.id);
     const map: Record<string, number> = {};
     t.results.forEach((r) => { map[r.teamId] = r.position; });
     setRankMap(map);
+    setActivePlayerId(t.activePlayerId ?? "");
   };
 
   const save = async (tournamentId: string) => {
@@ -61,7 +82,7 @@ export default function TournamentsSection() {
     await fetch(`/api/tournaments/${tournamentId}/results`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ results }),
+      body: JSON.stringify({ results, activePlayerId: activePlayerId || null }),
     });
     setSaving(false);
     setEditing(null);
@@ -128,44 +149,77 @@ export default function TournamentsSection() {
             </div>
 
             {editing === t.id ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <p className="text-slate-400 text-xs">Attribuer une position à chaque équipe (1 = 1er) :</p>
-                {teams.map((team) => (
-                  <div key={team.id} className="flex items-center gap-3">
-                    <span className="text-slate-300 text-sm flex-1">
-                      {team.name}
-                      <span className="text-slate-500 text-xs ml-2">
-                        ({team.members.map((m) => m.participant.name).join(", ")})
+                <div className="space-y-2">
+                  {teams.map((team) => (
+                    <div key={team.id} className="flex items-center gap-3">
+                      <span className="text-slate-300 text-sm flex-1">
+                        {team.name}
+                        <span className="text-slate-500 text-xs ml-2">
+                          ({team.members.map((m) => m.participant.name).join(", ")})
+                        </span>
                       </span>
-                    </span>
-                    <select
-                      value={rankMap[team.id] ?? ""}
-                      onChange={(e) =>
-                        setRankMap({ ...rankMap, [team.id]: Number(e.target.value) })
-                      }
-                      className="bg-slate-700 text-slate-200 rounded px-2 py-1 text-sm"
-                    >
-                      <option value="">—</option>
-                      {[1, 2, 3, 4, 5, 6].map((pos) => (
-                        <option key={pos} value={pos}>
-                          {pos}e ({POINTS[pos]} pts)
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              t.results.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
-                  {t.results.map((r) => (
-                    <div key={r.teamId} className="text-sm text-slate-400">
-                      <span className="text-slate-300">{r.position}.</span> {r.team.name}{" "}
-                      <span className="text-indigo-400">{r.points}pts</span>
+                      <select
+                        value={rankMap[team.id] ?? ""}
+                        onChange={(e) =>
+                          setRankMap({ ...rankMap, [team.id]: Number(e.target.value) })
+                        }
+                        className="bg-slate-700 text-slate-200 rounded px-2 py-1 text-sm"
+                      >
+                        <option value="">—</option>
+                        {[1, 2, 3, 4, 5, 6].map((pos) => (
+                          <option key={pos} value={pos}>
+                            {pos}e ({POINTS[pos]} pts)
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   ))}
                 </div>
-              )
+
+                {sharedPlayers.length > 0 && (
+                  <div className="pt-3 border-t border-slate-700">
+                    <p className="text-slate-400 text-xs mb-2">
+                      Joueur partagé actif pour l&apos;Équipe 6 ce tournoi :
+                    </p>
+                    <div className="flex gap-2">
+                      {sharedPlayers.map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => setActivePlayerId(activePlayerId === p.id ? "" : p.id)}
+                          className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                            activePlayerId === p.id
+                              ? "bg-indigo-600 text-white"
+                              : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                          }`}
+                        >
+                          {p.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {t.results.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
+                    {t.results.map((r) => (
+                      <div key={r.teamId} className="text-sm text-slate-400">
+                        <span className="text-slate-300">{r.position}.</span> {r.team.name}{" "}
+                        <span className="text-indigo-400">{r.points}pts</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {t.activePlayerId && (
+                  <p className="text-slate-500 text-xs mt-1">
+                    Équipe 6 jouée avec{" "}
+                    {sharedPlayers.find((p) => p.id === t.activePlayerId)?.name ?? "—"}
+                  </p>
+                )}
+              </div>
             )}
           </div>
         ))}

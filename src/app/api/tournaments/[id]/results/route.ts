@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { pointsForPosition } from "@/lib/scoring";
 
-// body: { results: [{teamId, position}] }
+// body: { results: [{teamId, position}], activePlayerId?: string }
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await req.json();
@@ -23,7 +23,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
   await prisma.tournament.update({
     where: { id },
-    data: { status: results?.length > 0 ? "completed" : "pending" },
+    data: {
+      status: results?.length > 0 ? "completed" : "pending",
+      activePlayerId: body.activePlayerId ?? null,
+    },
   });
 
   return NextResponse.json({ ok: true });

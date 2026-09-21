@@ -32,12 +32,13 @@ model TeamMember {
 }
 
 model Tournament {
-  id        String             @id @default(cuid())
-  name      String
-  status    String             @default("pending")
-  order     Int                @default(0)
-  results   TournamentResult[]
-  createdAt DateTime           @default(now())
+  id             String             @id @default(cuid())
+  name           String
+  status         String             @default("pending")
+  order          Int                @default(0)
+  activePlayerId String?
+  results        TournamentResult[]
+  createdAt      DateTime           @default(now())
 }
 
 model TournamentResult {

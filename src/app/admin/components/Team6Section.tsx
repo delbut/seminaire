@@ -27,9 +27,7 @@ export default function Team6Section() {
       .then(({ teams: t }) => {
         setTeams(t ?? []);
         const team6 = (t ?? []).find((tm: Team) => tm.isFlexible);
-        if (team6 && team6.members.length >= 3) {
-          setConfirmed(true);
-        }
+        if (team6 && team6.members.length >= 3) setConfirmed(true);
       });
   };
 
@@ -38,10 +36,8 @@ export default function Team6Section() {
   const team6 = teams.find((t) => t.isFlexible);
   const regularTeams = teams.filter((t) => !t.isFlexible);
 
-  // The lone player is the only member of team 6 right after the draw
   const lonePlayer = team6?.members.length === 1 ? team6.members[0].participant : null;
 
-  // All players in regular teams
   const regularPlayers = regularTeams.flatMap((t) =>
     t.members.map((m) => ({ ...m.participant, teamId: t.id, teamName: t.name }))
   );
@@ -68,8 +64,13 @@ export default function Team6Section() {
 
   if (!team6) return null;
 
-  // Already configured
   if (confirmed && team6.members.length >= 3) {
+    // Find the 2 shared players (those also in a regular team)
+    const sharedPlayers = team6.members.filter((m) =>
+      regularTeams.some((t) => t.members.some((rm) => rm.participant.id === m.participant.id))
+    );
+    const loneMember = team6.members.find((m) => !sharedPlayers.includes(m));
+
     return (
       <section className="bg-slate-800 rounded-xl p-6 space-y-3">
         <div className="flex items-center justify-between">
@@ -81,16 +82,28 @@ export default function Team6Section() {
             Modifier
           </button>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {team6.members.map((m) => (
-            <span
-              key={m.participant.id}
-              className="px-3 py-1 rounded-full text-sm font-medium bg-indigo-500/20 text-indigo-300 border border-indigo-500/40"
-            >
-              {m.participant.name}
-            </span>
-          ))}
+        <div className="space-y-1 text-sm text-slate-300">
+          {loneMember && (
+            <div className="flex items-center gap-2">
+              <span className="text-indigo-400 font-medium">{loneMember.participant.name}</span>
+              <span className="text-slate-500 text-xs">— joueur fixe</span>
+            </div>
+          )}
+          {sharedPlayers.map((m) => {
+            const origTeam = regularTeams.find((t) =>
+              t.members.some((rm) => rm.participant.id === m.participant.id)
+            );
+            return (
+              <div key={m.participant.id} className="flex items-center gap-2">
+                <span className="text-indigo-400 font-medium">{m.participant.name}</span>
+                <span className="text-slate-500 text-xs">— aussi dans {origTeam?.name}</span>
+              </div>
+            );
+          })}
         </div>
+        <p className="text-slate-500 text-xs">
+          À chaque tournoi, tu choisiras lequel des 2 joueurs partagés joue avec l&apos;équipe 6.
+        </p>
       </section>
     );
   }
@@ -99,7 +112,6 @@ export default function Team6Section() {
     <section className="bg-slate-800 rounded-xl p-6 space-y-5">
       <h2 className="text-lg font-semibold text-white">👥 Formation de l&apos;Équipe 6</h2>
 
-      {/* Lone player */}
       {lonePlayer && (
         <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-lg p-4">
           <p className="text-indigo-300 text-xs font-semibold uppercase tracking-wide mb-1">
@@ -107,20 +119,19 @@ export default function Team6Section() {
           </p>
           <p className="text-white text-xl font-bold">{lonePlayer.name}</p>
           <p className="text-slate-400 text-sm mt-1">
-            Choisis 2 joueurs de 2 équipes différentes pour compléter l&apos;équipe 6.
+            Choisis 2 joueurs de 2 équipes différentes. Ils restent dans leurs équipes et jouent aussi avec l&apos;équipe 6 en alternance.
           </p>
         </div>
       )}
 
-      {/* Pick 1 */}
       <div>
-        <p className="text-slate-300 text-sm font-medium mb-2">2e joueur :</p>
+        <p className="text-slate-300 text-sm font-medium mb-2">1er joueur partagé :</p>
         <select
           value={pick1}
           onChange={(e) => { setPick1(e.target.value); setPick2(""); }}
           className="bg-slate-700 text-slate-200 rounded-lg px-3 py-2 text-sm w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
-          <option value="">— Choisir un joueur —</option>
+          <option value="">— Choisir —</option>
           {regularTeams.map((team) => (
             <optgroup key={team.id} label={team.name}>
               {team.members.map((m) => (
@@ -133,10 +144,9 @@ export default function Team6Section() {
         </select>
       </div>
 
-      {/* Pick 2 */}
       {pick1 && (
         <div>
-          <p className="text-slate-300 text-sm font-medium mb-1">3e joueur :</p>
+          <p className="text-slate-300 text-sm font-medium mb-1">2e joueur partagé :</p>
           <p className="text-slate-500 text-xs mb-2">
             Doit venir d&apos;une équipe différente de{" "}
             {regularPlayers.find((p) => p.id === pick1)?.name}.
@@ -146,7 +156,7 @@ export default function Team6Section() {
             onChange={(e) => setPick2(e.target.value)}
             className="bg-slate-700 text-slate-200 rounded-lg px-3 py-2 text-sm w-full max-w-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            <option value="">— Choisir un joueur —</option>
+            <option value="">— Choisir —</option>
             {regularTeams
               .filter((t) => t.id !== pick1TeamId)
               .map((team) => (
@@ -162,15 +172,15 @@ export default function Team6Section() {
         </div>
       )}
 
-      {/* Summary */}
       {canSave && lonePlayer && (
-        <div className="bg-slate-700/50 rounded-lg p-3 text-sm text-slate-300">
-          <span className="font-medium text-white">Équipe 6 : </span>
-          {lonePlayer.name} +{" "}
-          {regularPlayers.find((p) => p.id === pick1)?.name} +{" "}
-          {regularPlayers.find((p) => p.id === pick2)?.name}
+        <div className="bg-slate-700/50 rounded-lg p-3 text-sm">
+          <p className="text-white font-medium mb-1">Équipe 6 :</p>
+          <p className="text-slate-300">
+            {lonePlayer.name} (fixe) + {regularPlayers.find((p) => p.id === pick1)?.name} ou{" "}
+            {regularPlayers.find((p) => p.id === pick2)?.name} selon le tournoi
+          </p>
           <p className="text-slate-500 text-xs mt-1">
-            Les joueurs restants de leurs équipes d&apos;origine seront automatiquement regroupés.
+            Les 2 joueurs partagés restent aussi dans leurs équipes d&apos;origine.
           </p>
         </div>
       )}
