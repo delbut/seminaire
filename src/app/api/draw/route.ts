@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
+const FIXED_TEAM6_PLAYER = "Patrick";
+
 const PARTICIPANTS = [
   "Raphael", "Camilo", "Pierre", "Romain", "Isuri",
-  "Simon", "Faisal", "Patrick", "Ma Mariam", "Frederic", "Maxime",
+  "Simon", "Faisal", "Ma Mariam", "Frederic", "Maxime",
 ];
 
 function shuffle<T>(arr: T[]): T[] {
@@ -25,8 +27,11 @@ export async function POST() {
   const participants = await Promise.all(
     shuffled.map((name) => prisma.participant.create({ data: { name } }))
   );
+  const fixedPlayer = await prisma.participant.create({
+    data: { name: FIXED_TEAM6_PLAYER },
+  });
 
-  // Teams 1–5: 2 players each (indices 0–9)
+  // Teams 1–5: 2 players each, drawn from everyone except the fixed Team 6 player
   for (let i = 0; i < 5; i++) {
     const team = await prisma.team.create({
       data: { name: `Équipe ${i + 1}` },
@@ -39,12 +44,12 @@ export async function POST() {
     });
   }
 
-  // Team 6 (flexible): lone player at index 10, admin will pick 2 more
+  // Team 6 (flexible): fixed player, admin will pick 2 shared players more
   const team6 = await prisma.team.create({
     data: { name: "Équipe 6", isFlexible: true },
   });
   await prisma.teamMember.create({
-    data: { teamId: team6.id, participantId: participants[10].id },
+    data: { teamId: team6.id, participantId: fixedPlayer.id },
   });
 
   await prisma.settings.upsert({
