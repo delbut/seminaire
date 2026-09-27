@@ -18,9 +18,13 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 export async function POST() {
+  await prisma.tournamentResult.deleteMany();
   await prisma.teamMember.deleteMany();
   await prisma.team.deleteMany();
   await prisma.participant.deleteMany();
+  await prisma.tournament.updateMany({
+    data: { status: "pending", activePlayerId: null },
+  });
 
   const shuffled = shuffle(PARTICIPANTS);
 

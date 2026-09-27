@@ -16,9 +16,8 @@ export default function DrawSection({ drawDone, onDrawComplete }: Props) {
     setLoading(true);
     await fetch("/api/draw", { method: "POST" });
     await fetch("/api/tournaments", { method: "PUT" });
-    setLoading(false);
-    setConfirm(false);
     onDrawComplete();
+    window.location.reload();
   };
 
   return (
