@@ -126,7 +126,7 @@ export default function TournamentsSection() {
 
       <div className="space-y-3">
         {tournaments.map((t) => (
-          <div key={t.id} className="bg-slate-800 rounded-xl p-4">
+          <div key={t.id} className="bg-canal-surface border border-canal-border rounded-2xl p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-3">
                 <span className="font-semibold text-white">{t.name}</span>
@@ -134,7 +134,7 @@ export default function TournamentsSection() {
                   className={`text-xs px-2 py-0.5 rounded-full ${
                     t.status === "completed"
                       ? "bg-green-900 text-green-400"
-                      : "bg-slate-700 text-slate-400"
+                      : "bg-canal-surface-2 text-canal-muted"
                   }`}
                 >
                   {t.status === "completed" ? "Terminé" : "En attente"}
@@ -143,7 +143,7 @@ export default function TournamentsSection() {
               {editing !== t.id ? (
                 <button
                   onClick={() => startEdit(t)}
-                  className="text-indigo-400 hover:text-indigo-300 text-sm transition-colors"
+                  className="text-canal-red hover:text-white text-sm transition-colors"
                 >
                   Saisir les rencontres
                 </button>
@@ -152,13 +152,13 @@ export default function TournamentsSection() {
                   <button
                     onClick={() => save(t.id)}
                     disabled={saving || loadingMatches}
-                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded text-sm transition-colors disabled:opacity-50"
+                    className="bg-canal-red hover:bg-canal-red-dark text-white px-3 py-1 rounded-full text-sm transition-colors disabled:opacity-50"
                   >
                     {saving ? "…" : "Enregistrer"}
                   </button>
                   <button
                     onClick={() => setEditing(null)}
-                    className="text-slate-400 hover:text-white px-3 py-1 rounded text-sm transition-colors"
+                    className="text-canal-muted hover:text-white px-3 py-1 rounded text-sm transition-colors"
                   >
                     Annuler
                   </button>
@@ -168,14 +168,14 @@ export default function TournamentsSection() {
 
             {editing === t.id ? (
               <div className="space-y-3">
-                <p className="text-slate-400 text-xs">Score de chaque rencontre :</p>
+                <p className="text-canal-muted text-xs">Score de chaque rencontre :</p>
                 {loadingMatches ? (
-                  <p className="text-slate-500 text-sm">Chargement…</p>
+                  <p className="text-canal-muted text-sm">Chargement…</p>
                 ) : (
                   <div className="space-y-2">
                     {matches.map((m) => (
                       <div key={m.id} className="flex items-center gap-2">
-                        <span className="text-slate-300 text-sm flex-1 text-right">
+                        <span className="text-white/80 text-sm flex-1 text-right">
                           {teamLabel(m.teamA)}
                         </span>
                         <input
@@ -183,22 +183,22 @@ export default function TournamentsSection() {
                           min={0}
                           value={m.scoreA ?? ""}
                           onChange={(e) => setScore(m.id, "scoreA", e.target.value)}
-                          className="bg-slate-700 text-slate-200 rounded px-2 py-1 text-sm w-16 text-center"
+                          className="bg-canal-surface-2 text-white rounded px-2 py-1 text-sm w-16 text-center focus:outline-none focus:ring-2 focus:ring-canal-red"
                         />
-                        <span className="text-slate-500">–</span>
+                        <span className="text-canal-muted">–</span>
                         <input
                           type="number"
                           min={0}
                           value={m.scoreB ?? ""}
                           onChange={(e) => setScore(m.id, "scoreB", e.target.value)}
-                          className="bg-slate-700 text-slate-200 rounded px-2 py-1 text-sm w-16 text-center"
+                          className="bg-canal-surface-2 text-white rounded px-2 py-1 text-sm w-16 text-center focus:outline-none focus:ring-2 focus:ring-canal-red"
                         />
-                        <span className="text-slate-300 text-sm flex-1">
+                        <span className="text-white/80 text-sm flex-1">
                           {teamLabel(m.teamB)}
                         </span>
                       </div>
                     ))}
-                    <p className="text-slate-500 text-xs">
+                    <p className="text-canal-muted text-xs">
                       Le classement final (et les points) sera calculé automatiquement une fois
                       toutes les rencontres renseignées.
                     </p>
@@ -206,8 +206,8 @@ export default function TournamentsSection() {
                 )}
 
                 {sharedPlayers.length > 0 && (
-                  <div className="pt-3 border-t border-slate-700">
-                    <p className="text-slate-400 text-xs mb-2">
+                  <div className="pt-3 border-t border-canal-border">
+                    <p className="text-canal-muted text-xs mb-2">
                       Joueur partagé actif pour l&apos;Équipe 6 ce tournoi :
                     </p>
                     <div className="flex gap-2">
@@ -215,10 +215,10 @@ export default function TournamentsSection() {
                         <button
                           key={p.id}
                           onClick={() => setActivePlayerId(activePlayerId === p.id ? "" : p.id)}
-                          className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                          className={`px-3 py-1 rounded-full text-sm transition-colors ${
                             activePlayerId === p.id
-                              ? "bg-indigo-600 text-white"
-                              : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                              ? "bg-canal-red text-white"
+                              : "bg-canal-surface-2 text-white/80 hover:bg-canal-border"
                           }`}
                         >
                           {p.name}
@@ -233,15 +233,15 @@ export default function TournamentsSection() {
                 {t.results.length > 0 && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
                     {t.results.map((r) => (
-                      <div key={r.teamId} className="text-sm text-slate-400">
-                        <span className="text-slate-300">{r.position}.</span> {r.team.name}{" "}
-                        <span className="text-indigo-400">{r.points}pts</span>
+                      <div key={r.teamId} className="text-sm text-canal-muted">
+                        <span className="text-white/80">{r.position}.</span> {r.team.name}{" "}
+                        <span className="text-canal-red">{r.points}pts</span>
                       </div>
                     ))}
                   </div>
                 )}
                 {t.activePlayerId && (
-                  <p className="text-slate-500 text-xs mt-1">
+                  <p className="text-canal-muted text-xs mt-1">
                     Équipe 6 jouée avec{" "}
                     {sharedPlayers.find((p) => p.id === t.activePlayerId)?.name ?? "—"}
                   </p>
@@ -252,8 +252,8 @@ export default function TournamentsSection() {
         ))}
       </div>
 
-      <div className="bg-slate-800 rounded-xl p-4">
-        <h3 className="text-sm font-medium text-slate-300 mb-3">Ajouter un tournoi</h3>
+      <div className="bg-canal-surface border border-canal-border rounded-2xl p-4">
+        <h3 className="text-sm font-medium text-white/80 mb-3">Ajouter un tournoi</h3>
         <div className="flex gap-2">
           <input
             type="text"
@@ -261,12 +261,12 @@ export default function TournamentsSection() {
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addTournament()}
             placeholder="Nom du tournoi…"
-            className="flex-1 bg-slate-700 text-slate-200 rounded-lg px-3 py-2 text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="flex-1 bg-canal-surface-2 text-white rounded-lg px-3 py-2 text-sm placeholder-canal-muted focus:outline-none focus:ring-2 focus:ring-canal-red"
           />
           <button
             onClick={addTournament}
             disabled={addingTournament || !newName.trim()}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+            className="bg-canal-red hover:bg-canal-red-dark text-white px-4 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-50"
           >
             {addingTournament ? "…" : "Ajouter"}
           </button>
