@@ -14,11 +14,13 @@ model Participant {
 }
 
 model Team {
-  id         String             @id @default(cuid())
-  name       String
-  isFlexible Boolean            @default(false)
-  members    TeamMember[]
-  results    TournamentResult[]
+  id             String             @id @default(cuid())
+  name           String
+  isFlexible     Boolean            @default(false)
+  members        TeamMember[]
+  results        TournamentResult[]
+  matchesAsTeamA Match[]            @relation("MatchTeamA")
+  matchesAsTeamB Match[]            @relation("MatchTeamB")
 }
 
 model TeamMember {
@@ -38,7 +40,22 @@ model Tournament {
   order          Int                @default(0)
   activePlayerId String?
   results        TournamentResult[]
+  matches        Match[]
   createdAt      DateTime           @default(now())
+}
+
+model Match {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  teamAId      String
+  teamA        Team       @relation("MatchTeamA", fields: [teamAId], references: [id])
+  teamBId      String
+  teamB        Team       @relation("MatchTeamB", fields: [teamBId], references: [id])
+  scoreA       Int?
+  scoreB       Int?
+
+  @@unique([tournamentId, teamAId, teamBId])
 }
 
 model TournamentResult {

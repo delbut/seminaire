@@ -29,14 +29,23 @@ interface Tournament {
   results: TournamentResult[];
 }
 
-const POINTS: Record<number, number> = { 1: 6, 2: 5, 3: 4, 4: 3, 5: 2, 6: 1 };
+interface Match {
+  id: string;
+  teamAId: string;
+  teamBId: string;
+  teamA: Team;
+  teamB: Team;
+  scoreA: number | null;
+  scoreB: number | null;
+}
 
 export default function TournamentsSection() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [editing, setEditing] = useState<string | null>(null);
-  const [rankMap, setRankMap] = useState<Record<string, number>>({});
+  const [matches, setMatches] = useState<Match[]>([]);
   const [activePlayerId, setActivePlayerId] = useState<string>("");
+  const [loadingMatches, setLoadingMatches] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newName, setNewName] = useState("");
   const [addingTournament, setAddingTournament] = useState(false);
@@ -65,24 +74,33 @@ export default function TournamentsSection() {
         .map((m) => m.participant)
     : [];
 
-  const startEdit = (t: Tournament) => {
+  const teamLabel = (team: Team) =>
+    `${team.name} (${team.members.map((m) => m.participant.name).join(", ")})`;
+
+  const startEdit = async (t: Tournament) => {
     setEditing(t.id);
-    const map: Record<string, number> = {};
-    t.results.forEach((r) => { map[r.teamId] = r.position; });
-    setRankMap(map);
     setActivePlayerId(t.activePlayerId ?? "");
+    setLoadingMatches(true);
+    const res = await fetch(`/api/tournaments/${t.id}/matches`);
+    const m = await res.json();
+    setMatches(m ?? []);
+    setLoadingMatches(false);
+  };
+
+  const setScore = (matchId: string, side: "scoreA" | "scoreB", value: string) => {
+    const parsed = value === "" ? null : Math.max(0, Number(value));
+    setMatches((prev) => prev.map((m) => (m.id === matchId ? { ...m, [side]: parsed } : m)));
   };
 
   const save = async (tournamentId: string) => {
     setSaving(true);
-    const results = Object.entries(rankMap)
-      .filter(([, pos]) => pos > 0)
-      .map(([teamId, position]) => ({ teamId, position }));
-
-    await fetch(`/api/tournaments/${tournamentId}/results`, {
+    await fetch(`/api/tournaments/${tournamentId}/matches`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ results, activePlayerId: activePlayerId || null }),
+      body: JSON.stringify({
+        matches: matches.map((m) => ({ id: m.id, scoreA: m.scoreA, scoreB: m.scoreB })),
+        activePlayerId: activePlayerId || null,
+      }),
     });
     setSaving(false);
     setEditing(null);
@@ -127,13 +145,13 @@ export default function TournamentsSection() {
                   onClick={() => startEdit(t)}
                   className="text-indigo-400 hover:text-indigo-300 text-sm transition-colors"
                 >
-                  Modifier les scores
+                  Saisir les rencontres
                 </button>
               ) : (
                 <div className="flex gap-2">
                   <button
                     onClick={() => save(t.id)}
-                    disabled={saving}
+                    disabled={saving || loadingMatches}
                     className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded text-sm transition-colors disabled:opacity-50"
                   >
                     {saving ? "…" : "Enregistrer"}
@@ -150,33 +168,42 @@ export default function TournamentsSection() {
 
             {editing === t.id ? (
               <div className="space-y-3">
-                <p className="text-slate-400 text-xs">Attribuer une position à chaque équipe (1 = 1er) :</p>
-                <div className="space-y-2">
-                  {teams.map((team) => (
-                    <div key={team.id} className="flex items-center gap-3">
-                      <span className="text-slate-300 text-sm flex-1">
-                        {team.name}
-                        <span className="text-slate-500 text-xs ml-2">
-                          ({team.members.map((m) => m.participant.name).join(", ")})
+                <p className="text-slate-400 text-xs">Score de chaque rencontre :</p>
+                {loadingMatches ? (
+                  <p className="text-slate-500 text-sm">Chargement…</p>
+                ) : (
+                  <div className="space-y-2">
+                    {matches.map((m) => (
+                      <div key={m.id} className="flex items-center gap-2">
+                        <span className="text-slate-300 text-sm flex-1 text-right">
+                          {teamLabel(m.teamA)}
                         </span>
-                      </span>
-                      <select
-                        value={rankMap[team.id] ?? ""}
-                        onChange={(e) =>
-                          setRankMap({ ...rankMap, [team.id]: Number(e.target.value) })
-                        }
-                        className="bg-slate-700 text-slate-200 rounded px-2 py-1 text-sm"
-                      >
-                        <option value="">—</option>
-                        {[1, 2, 3, 4, 5, 6].map((pos) => (
-                          <option key={pos} value={pos}>
-                            {pos}e ({POINTS[pos]} pts)
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ))}
-                </div>
+                        <input
+                          type="number"
+                          min={0}
+                          value={m.scoreA ?? ""}
+                          onChange={(e) => setScore(m.id, "scoreA", e.target.value)}
+                          className="bg-slate-700 text-slate-200 rounded px-2 py-1 text-sm w-16 text-center"
+                        />
+                        <span className="text-slate-500">–</span>
+                        <input
+                          type="number"
+                          min={0}
+                          value={m.scoreB ?? ""}
+                          onChange={(e) => setScore(m.id, "scoreB", e.target.value)}
+                          className="bg-slate-700 text-slate-200 rounded px-2 py-1 text-sm w-16 text-center"
+                        />
+                        <span className="text-slate-300 text-sm flex-1">
+                          {teamLabel(m.teamB)}
+                        </span>
+                      </div>
+                    ))}
+                    <p className="text-slate-500 text-xs">
+                      Le classement final (et les points) sera calculé automatiquement une fois
+                      toutes les rencontres renseignées.
+                    </p>
+                  </div>
+                )}
 
                 {sharedPlayers.length > 0 && (
                   <div className="pt-3 border-t border-slate-700">
